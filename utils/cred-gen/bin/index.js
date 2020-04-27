@@ -26,7 +26,7 @@ app.use(function(req, res, next) {
 });
 
 app.get("/giveMeCredentials", (req, res, next) => {
-  res.json(getTURNCredentials("bongo", "***REMOVED***"));
+  res.json(getTURNCredentials("bongo", process.argv[2]));
 });
 
 app.listen(3000, () => {
