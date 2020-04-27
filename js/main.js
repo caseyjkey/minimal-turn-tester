@@ -70,6 +70,34 @@ function readServersFromLocalStorage() {
   }
 }
 
+function getServerCreds() {
+  return new Promise(function (resolve, reject) {
+    var request = new XMLHttpRequest();
+    request.open('GET', 'http://lvh.me:3000/giveMeCredentials', true);
+    request.onload = function() {
+      var data = JSON.parse(this.response);
+      if (request.status == 200) {
+        resolve(data);
+      } else {
+        reject(request.status);
+      }
+
+    }
+    request.send();
+  });
+}
+
+let creds = async () => {
+  try {
+    return await getServerCreds();
+  } catch(error) {
+    console.log("Error fetching creds: ", error);
+  }
+}
+
+let jsonCreds = creds();
+jsonCreds.then((result) => console.log(result));
+  
 function selectServer(event) {
   const option = event.target;
   const value = JSON.parse(option.value);
