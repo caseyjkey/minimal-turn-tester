@@ -10,5 +10,8 @@
   "license": "ISC",
   "bin": {
     "hello": "./bin/index.js"
+  },
+  "dependencies": {
+    "express": "^4.17.1"
   }
 }

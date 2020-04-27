@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 var crypto = require('crypto');
+var express = require('express');
+var app = express();
 
 function getTURNCredentials(name, secret){    
 
@@ -17,4 +19,11 @@ function getTURNCredentials(name, secret){
     };
 }
 
-console.log(getTURNCredentials("bongo", "***REMOVED***"));
+app.get("/giveMeCredentials", (req, res, next) => {
+  res.json(getTURNCredentials("bongo", "***REMOVED***"));
+});
+
+app.listen(3000, () => {
+  console.log("Server running on port 3000");
+});
+
