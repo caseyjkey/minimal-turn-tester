@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// API for getting TURN creds
 var crypto = require('crypto');
 var express = require('express');
 var app = express();
