@@ -70,8 +70,6 @@ function readServersFromLocalStorage() {
   }
 }
 
-/* Fetch TURN credentials */
-
 function getServerCreds() {
   return new Promise(function (resolve, reject) {
     var request = new XMLHttpRequest();
@@ -98,11 +96,9 @@ let creds = async () => {
 }
 
 let jsonCreds = creds();
-jsonCreds.then();
+jsonCreds.then((result) => jsonCreds = result);
 console.log(jsonCreds);
-
-/* End of TURN credentials */
-
+  
 function selectServer(event) {
   const option = event.target;
   const value = JSON.parse(option.value);
