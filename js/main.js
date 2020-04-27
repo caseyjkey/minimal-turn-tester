@@ -96,7 +96,8 @@ let creds = async () => {
 }
 
 let jsonCreds = creds();
-jsonCreds.then((result) => console.log(result));
+jsonCreds.then((result) => jsonCreds = result);
+console.log(jsonCreds);
   
 function selectServer(event) {
   const option = event.target;
@@ -116,8 +117,8 @@ function addServer() {
   const option = document.createElement('option');
   const iceServer = {
     urls: [urlInput.value],
-    username: '1588106080:bongo',
-    credential: passcodeInput.value,
+    username: jsonCreds.username,
+    credential: jsonCreds.password,
   };
   option.value = JSON.stringify(iceServer);
   option.text = `${urlInput.value} `;
