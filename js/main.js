@@ -88,9 +88,8 @@ function addServer() {
   const option = document.createElement('option');
   const iceServer = {
     urls: [urlInput.value],
-    username: 'webrtc',
+    username: '1588106080:bongo',
     credential: passcodeInput.value,
-    credentialType: "password"
   };
   option.value = JSON.stringify(iceServer);
   option.text = `${urlInput.value} `;

@@ -1,0 +1,14 @@
+{
+  "name": "cred-gen",
+  "version": "1.0.0",
+  "description": "generates credentials for a CoTurn server using a static auth key",
+  "main": "bin/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Casey Key",
+  "license": "ISC",
+  "bin": {
+    "hello": "./bin/index.js"
+  }
+}
