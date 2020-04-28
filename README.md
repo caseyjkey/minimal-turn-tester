@@ -6,3 +6,5 @@ To test a STUN/TURN server:
 5. (optional) add a server
 6. Click Gather candidates
 
+Bugs:
+Currently, the passcode may not be loaded, you can attempt fixing by adding a TURN server without  a password, then double click the entry to see if the passcode input gets populated.
