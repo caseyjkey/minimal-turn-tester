@@ -16,7 +16,10 @@ const removeButton = document.querySelector('button#remove');
 const resetButton = document.querySelector('button#reset');
 const servers = document.querySelector('select#servers');
 const urlInput = document.querySelector('input#url');
+const usernameInput = document.querySelector('input#username');
 const iceCandidatePoolInput = document.querySelector('input#iceCandidatePool');
+
+
 
 addButton.onclick = addServer;
 gatherButton.onclick = start;
@@ -36,39 +39,11 @@ iceCandidatePoolInput.onchange = function(e) {
 let begin;
 let pc;
 let candidates;
+let jsonCreds;
 
 const allServersKey = 'servers';
 
-function setDefaultServer(serversSelect) {
-  const o = document.createElement('option');
-  o.value = '{"urls":["turn:54.188.208.196:443"]}';
-  o.text = 'turn:54.188.208.196:443';
-  serversSelect.add(o);
-}
-
-function writeServersToLocalStorage() {
-  const serversSelect = document.querySelector('select#servers');
-  const allServers = JSON.stringify(Object.values(serversSelect.options).map(o => JSON.parse(o.value)));
-  window.localStorage.setItem(allServersKey, allServers);
-}
-
-function readServersFromLocalStorage() {
-  document.querySelectorAll('select#servers option').forEach(option => option.remove());
-  const serversSelect = document.querySelector('select#servers');
-  const storedServers = window.localStorage.getItem(allServersKey);
-
-  if (storedServers === null || storedServers === '') {
-    setDefaultServer(serversSelect);
-  } else {
-    JSON.parse(storedServers).forEach((server, key) => {
-      const o = document.createElement('option');
-      o.value = JSON.stringify(server);
-      o.text = server.urls[0];
-      o.ondblclick = selectServer;
-      serversSelect.add(o);
-    });
-  }
-}
+/* Fetch TURN jsonCreds from API */
 
 function getServerCreds() {
   return new Promise(function (resolve, reject) {
@@ -95,16 +70,63 @@ let creds = async () => {
   }
 }
 
-let jsonCreds = creds();
-jsonCreds.then((result) => jsonCreds = result);
-console.log(jsonCreds);
+creds().then((result) => {
+  usernameInput.value = result.username;
+  passcodeInput.value = result.password;
+  jsonCreds = result;
+  // Only load from local storage once we have TURN creds
+  readServersFromLocalStorage();
+  console.log(jsonCreds);
+  gatherButton.disabled = false;
+});
+
+/* End of Fetching TURN jsonCreds */
+
+function setDefaultServer(serversSelect) {
+  const o = document.createElement('option');
+  const iceServer = {
+    urls: "turn:54.188.208.196:443",
+    username: jsonCreds.username,
+    credential: jsonCreds.password,
+  };
+  o.value = JSON.stringify(iceServer);
+  console.log(o.value);
+  o.text = `${iceServer.urls} ` + (` [${iceServer.username}:${iceServer.credential}]`);
+  serversSelect.add(o);
+}
+
+function writeServersToLocalStorage() {
+  const serversSelect = document.querySelector('select#servers');
+  const allServers = JSON.stringify(Object.values(serversSelect.options).map(o => JSON.parse(o.value)));
+  window.localStorage.setItem(allServersKey, allServers);
+}
+
+function readServersFromLocalStorage() {
+  document.querySelectorAll('select#servers option').forEach(option => option.remove());
+  const serversSelect = document.querySelector('select#servers');
+  const storedServers = window.localStorage.getItem(allServersKey);
+
+  if (storedServers === null || storedServers === '') {
+    setDefaultServer(serversSelect);
+  } else {
+    JSON.parse(storedServers).forEach((server, key) => {
+      const o = document.createElement('option');
+      o.value = JSON.stringify(server);
+      o.text = server.urls[0];
+      o.ondblclick = selectServer;
+      serversSelect.add(o);
+    });
+  }
+}
   
 function selectServer(event) {
   const option = event.target;
   const value = JSON.parse(option.value);
   urlInput.value = value.urls[0];
-  passcodeInput.value = value.credential || '';
+  usernameInput.value = value.username || jsonCreds.username;
+  passcodeInput.value = value.credential || jsonCreds.password;
 }
+
 
 function addServer() {
   const scheme = urlInput.value.split(':')[0];
@@ -122,13 +144,14 @@ function addServer() {
   };
   option.value = JSON.stringify(iceServer);
   option.text = `${urlInput.value} `;
+  const username = usernameInput.value;
   const passcode = passcodeInput.value;
-  if (passcode) {
-    option.text += (` [${passcode}]`);
+  if (username || passcode) {
+    option.text += (` [${username}:${passcode}]`);
   }
   option.ondblclick = selectServer;
   servers.add(option);
-  urlInput.value = passcodeInput.value = '';
+  urlInput.value = '';
   writeServersToLocalStorage();
 }
 
@@ -309,7 +332,6 @@ function iceCandidateError(e) {
     e.errorText + '\n';
 }
 
-readServersFromLocalStorage();
 
 // check if we have getUserMedia permissions.
 navigator.mediaDevices
