@@ -50,17 +50,24 @@ let creds = async () => {
 /* End of Fetching Credentials */
 
 async function start(servers) {
+
+  console.log("start");
   try {
     jsonCreds = await getServerCreds();
   } catch(error) {
     console.log("Error fetching creds:", error);
   }
 
-  gatherCandidates(servers);
+  for (let i = 0; i < servers.length; i++) {
+    console.log("testing: ", servers[i]);
+    await testServer(servers[i]);
+  }
+
+  console.log("after for")
 
   return await new Promise((resolve, reject) => {
     let id = setInterval(() => {
-      if (pc === null) {
+      if (result.length == servers.length) {
         resolve(result);
         clearInterval(id);
       }
@@ -80,46 +87,50 @@ async function start(servers) {
 // Each server expected to be of this format: "turn:54.188.208.196:443"
 // @param servers [Array]
 // @return [Array] 
-function gatherCandidates(serversArr) {
-  servers = serversArr;
-  // Build a connection config for each server
-  for (let i = 0; i < servers.length; ++i) {
-    console.log("Loop ", i)
-    server = servers[i];
+async function testServer(protoIpPort) {
+  server = protoIpPort;
 
-    const iceServer = {
-      urls: [server],
-      username: jsonCreds.username,
-      credential: jsonCreds.password,
-    }
-  
-
-    let iceTransports = 'all';
-
-    // Create a PeerConnection with no streams, but force a m=audio line.
-    const config = {
-      iceServers: [iceServer],
-      iceTransportPolicy: iceTransports,
-      iceCandidatePoolSize: 10
-    };
-
-    const offerOptions = {offerToReceiveAudio: 1};
-    // Whether we gather IPv6 candidates.
-    // Whether we only gather a single set of candidates for RTP and RTCP.
-
-    console.log(`PeerConnection created with config=${JSON.stringify(config)}`);
-    pc = new RTCPeerConnection(config);
-    console.log("pc",)
-    pc.onicecandidate = iceCallback;
-    pc.onicegatheringstatechange = gatheringStateChange;
-    pc.onicecandidateerror = iceCandidateError;
-    pc.createOffer(
-        offerOptions
-    ).then(
-        gotDescription,
-        noDescription
-    );
+  const iceServer = {
+    urls: [server],
+    username: jsonCreds.username,
+    credential: jsonCreds.password,
   }
+
+
+  let iceTransports = 'all';
+
+  // Create a PeerConnection with no streams, but force a m=audio line.
+  const config = {
+    iceServers: [iceServer],
+    iceTransportPolicy: iceTransports,
+    iceCandidatePoolSize: 10
+  };
+
+  const offerOptions = {offerToReceiveAudio: 1};
+  // Whether we gather IPv6 candidates.
+  // Whether we only gather a single set of candidates for RTP and RTCP.
+
+  console.log(`PeerConnection created with config=${JSON.stringify(config)}`);
+  pc = new RTCPeerConnection(config);
+
+  pc.onicecandidate = iceCallback;
+  pc.onicegatheringstatechange = gatheringStateChange;
+  pc.onicecandidateerror = iceCandidateError;
+  pc.createOffer(
+      offerOptions
+  ).then(
+      gotDescription,
+      noDescription
+  );
+
+  return new Promise((resolve, reject) => {
+    let id = setInterval(() => {
+      if (pc === null) {
+        resolve();
+        clearInterval(id);
+      }
+    }, 1000);
+  })
 }
 
 function iceCallback(event) {
