@@ -47,14 +47,13 @@ let creds = async () => {
 /* End of Fetching Credentials */
 
 function start(servers) {
-  let serverResponses = [];
   creds().then((turnCreds) => {
     jsonCreds = turnCreds;
     // Only gather candidates once we have creds from API
-    console.log("Gathering candidates using these creds: ", jsonCreds);
     gatherCandidates(servers);
-    console.log("End:", result);
   });
+
+  return result;
 }
 
 
@@ -88,7 +87,7 @@ function gatherCandidates(servers) {
     // Whether we gather IPv6 candidates.
     // Whether we only gather a single set of candidates for RTP and RTCP.
 
-    console.log(`Creating new PeerConnection with config=${JSON.stringify(config)}`);
+    console.log(`PeerConnection created with config=${JSON.stringify(config)}`);
     pc = new RTCPeerConnection(config);
     pc.onicecandidate = iceCallback;
     pc.onicegatheringstatechange = gatheringStateChange;
@@ -103,8 +102,6 @@ function gatherCandidates(servers) {
 }
 
 function iceCallback(event) {
-  console.log("iceCallback", event, RTCPeerConnection.prototype)
-  const elapsed = ((window.performance.now() - begin) / 1000).toFixed(3);
   if (event.candidate) {
     if (event.candidate.candidate === '') {
       // End of candidate generation
@@ -112,11 +109,9 @@ function iceCallback(event) {
     }
     const {candidate} = event;
     candidates.push(candidate);
-    console.log("Candidates", candidates);
   } else if (!('onicegatheringstatechange' in RTCPeerConnection.prototype)) {
     // should not be done if its done in the icegatheringstatechange callback.
     let serverResponse = getFinalResult();
-    console.log("server said: ", serverResponse);
     result.push(serverResponses);
     pc.close();
     pc = null;
@@ -127,7 +122,6 @@ function iceCallback(event) {
 // Try to determine authentication failures and unreachable TURN
 // servers by using heuristics on the candidate types gathered.
 function getFinalResult() {
-  console.log("Getting final result", pc);
   let connResult = 'Connection Complete';
 
   // get the candidates types (host, srflx, relay)
@@ -158,7 +152,6 @@ function getFinalResult() {
   }
 
   connResult = server + ': ' + connResult;
-  console.log("getFinalResult: ", connResult);
   return connResult;
 }
 
@@ -204,4 +197,4 @@ navigator.mediaDevices
       });
     });
 
-start(["turn:54.188.208.196:443"]);
+console.log("Result: ", start(["turn:54.188.208.196:443"]));
