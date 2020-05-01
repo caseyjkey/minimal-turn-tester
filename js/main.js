@@ -50,20 +50,16 @@ let creds = async () => {
 /* End of Fetching Credentials */
 
 async function start(servers) {
-
-  console.log("start");
   try {
     jsonCreds = await getServerCreds();
   } catch(error) {
-    console.log("Error fetching creds:", error);
+    console.log("Error! Do you have the cred-gen API running? ", error);
   }
 
   for (let i = 0; i < servers.length; i++) {
-    console.log("testing: ", servers[i]);
     await testServer(servers[i]);
+    candidates = [];
   }
-
-  console.log("after for")
 
   return await new Promise((resolve, reject) => {
     let id = setInterval(() => {
@@ -73,12 +69,6 @@ async function start(servers) {
       }
     }, 1000);
   });
-  /*
-  creds().then((turnCreds) => {
-    jsonCreds = turnCreds;
-    // Only gather candidates once we have creds from API
-    gatherCandidates(servers);
-  });*/
 }
 
 
@@ -134,7 +124,6 @@ async function testServer(protoIpPort) {
 }
 
 function iceCallback(event) {
-  console.log("iceCallback", server)
   if (event.candidate) {
     if (event.candidate.candidate === '') {
       // End of candidate generation
@@ -143,9 +132,9 @@ function iceCallback(event) {
     const {candidate} = event;
     candidates.push(candidate);
   } else if (!('onicegatheringstatechange' in RTCPeerConnection.prototype)) {
-    // should not be done if its done in the icegatheringstatechange callback.
+    // this doesn't execute because we have icegatheringstatechange callback.
     let serverResponse = getFinalResult();
-    result.push(serverResponses);
+    result.push(serverResponse);
     pc.close();
     pc = null;
   }
@@ -154,7 +143,6 @@ function iceCallback(event) {
 // Try to determine authentication failures and unreachable TURN
 // servers by using heuristics on the candidate types gathered.
 function getFinalResult() {
-  console.log("final: ", server);
   let connResult = 'Connection Complete';
 
   // get the candidates types (host, srflx, relay)
@@ -182,6 +170,11 @@ function getFinalResult() {
         connResult = 'Not reachable?';
       }
     }
+  } else {
+    // Check to see if srflx candidate was not found
+    if (types.indexOf('srflx') === -1) {
+      connResult = 'Connection failed.';
+    }
   }
 
   connResult = server + ': ' + connResult;
@@ -189,7 +182,6 @@ function getFinalResult() {
 }
 
 function gatheringStateChange() {
-  console.log("gethering", server);
   if (pc.iceGatheringState !== 'complete') {
     return;
   }
@@ -197,14 +189,13 @@ function gatheringStateChange() {
   result.push(serverResponse);
   servers.shift();
   if (servers.length == 0) {
-    console.log("closing pc");
     pc.close();
     pc = null;
   }
 }
 
 function iceCandidateError(e) {
-  console.log("ice candidate error", server);
+  // console.log("ice candidate error", server);
   // The interesting attributes of the error are
   // * the url (which allows looking up the server)
   // * the errorCode and errorText
