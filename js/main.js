@@ -12,6 +12,8 @@ let begin;
 let pc;
 let candidates;
 let jsonCreds;
+let server;
+let result = [];
 
 const allServersKey = 'servers';
 
@@ -46,15 +48,13 @@ let creds = async () => {
 
 function start(servers) {
   let serverResponses = [];
-  creds().then((result) => {
-    jsonCreds = result;
+  creds().then((turnCreds) => {
+    jsonCreds = turnCreds;
     // Only gather candidates once we have creds from API
-    console.log("Gathering credentials using these creds: ", jsonCreds);
-    let serverResponses = gatherCandidates(servers);
-    console.log(serverResponses);
+    console.log("Gathering candidates using these creds: ", jsonCreds);
+    gatherCandidates(servers);
+    console.log("End:", result);
   });
-  console.log(serverResponses);
-  return serverResponses
 }
 
 
@@ -64,12 +64,12 @@ function start(servers) {
 // @param servers [Array]
 // @return [Array] 
 function gatherCandidates(servers) {
-  let result = [];
-
   // Build a connection config for each server
   for (let i = 0; i < servers.length; ++i) {
+    server = servers[i];
+
     const iceServer = {
-      urls: [servers[i]],
+      urls: [server],
       username: jsonCreds.username,
       credential: jsonCreds.password,
     }
@@ -103,6 +103,7 @@ function gatherCandidates(servers) {
 }
 
 function iceCallback(event) {
+  console.log("iceCallback", event, RTCPeerConnection.prototype)
   const elapsed = ((window.performance.now() - begin) / 1000).toFixed(3);
   if (event.candidate) {
     if (event.candidate.candidate === '') {
@@ -111,9 +112,12 @@ function iceCallback(event) {
     }
     const {candidate} = event;
     candidates.push(candidate);
+    console.log("Candidates", candidates);
   } else if (!('onicegatheringstatechange' in RTCPeerConnection.prototype)) {
     // should not be done if its done in the icegatheringstatechange callback.
-    result.push(getFinalResult());
+    let serverResponse = getFinalResult();
+    console.log("server said: ", serverResponse);
+    result.push(serverResponses);
     pc.close();
     pc = null;
     gatherButton.disabled = false;
@@ -123,7 +127,8 @@ function iceCallback(event) {
 // Try to determine authentication failures and unreachable TURN
 // servers by using heuristics on the candidate types gathered.
 function getFinalResult() {
-  let result = 'Connection Complete';
+  console.log("Getting final result", pc);
+  let connResult = 'Connection Complete';
 
   // get the candidates types (host, srflx, relay)
   const types = candidates.map(function(cand) {
@@ -139,28 +144,30 @@ function getFinalResult() {
   //
   // This only works for TURN/UDP since we do not get
   // srflx candidates from TURN/TCP.
-  if (server.urls[0].indexOf('turn:') === 0 &&
-    server.urls[0].indexOf('?transport=tcp') === -1) {
+  if (server.indexOf('turn:') === 0 &&
+    server.indexOf('?transport=tcp') === -1) {
     if (types.indexOf('relay') === -1) {
       if (types.indexOf('srflx') > -1) {
         // a binding response but no relay candidate suggests auth failure.
-        result = 'Authentication failed?';
+        connResult = 'Authentication failed?';
       } else {
         // either the TURN server is down or the clients access is blocked.
-        result = 'Not reachable?';
+        connResult = 'Not reachable?';
       }
     }
   }
 
-  result = urls[0] + ': ' + result;
-  return result;
+  connResult = server + ': ' + connResult;
+  console.log("getFinalResult: ", connResult);
+  return connResult;
 }
 
 function gatheringStateChange() {
   if (pc.iceGatheringState !== 'complete') {
     return;
   }
-  result.push(getFinalResult());
+  let serverResponse = getFinalResult();
+  result.push(serverResponse);
   pc.close();
   pc = null;
 }
@@ -197,4 +204,4 @@ navigator.mediaDevices
       });
     });
 
-    start();
+start(["turn:54.188.208.196:443"]);
