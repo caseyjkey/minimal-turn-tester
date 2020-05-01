@@ -12,6 +12,7 @@ let begin;
 let pc;
 let candidates;
 let jsonCreds;
+let servers = [];
 let server;
 let result = [];
 
@@ -19,7 +20,7 @@ const allServersKey = 'servers';
 
 /* Fetch TURN jsonCreds from API */
 
-function getServerCreds() {
+async function getServerCreds() {
   return new Promise(function (resolve, reject) {
     var request = new XMLHttpRequest();
     request.open('GET', 'http://lvh.me:3000/giveMeCredentials', true);
@@ -38,22 +39,39 @@ function getServerCreds() {
 
 let creds = async () => {
   try {
-    return await getServerCreds();
+    return getServerCreds();
   } catch(error) {
     console.log("Error fetching creds: ", error);
   }
+
+
 }
 
 /* End of Fetching Credentials */
 
-function start(servers) {
+async function start(servers) {
+  try {
+    jsonCreds = await getServerCreds();
+  } catch(error) {
+    console.log("Error fetching creds:", error);
+  }
+
+  gatherCandidates(servers);
+
+  return await new Promise((resolve, reject) => {
+    let id = setInterval(() => {
+      if (pc === null) {
+        resolve(result);
+        clearInterval(id);
+      }
+    }, 1000);
+  });
+  /*
   creds().then((turnCreds) => {
     jsonCreds = turnCreds;
     // Only gather candidates once we have creds from API
     gatherCandidates(servers);
-  });
-
-  return result;
+  });*/
 }
 
 
@@ -62,9 +80,11 @@ function start(servers) {
 // Each server expected to be of this format: "turn:54.188.208.196:443"
 // @param servers [Array]
 // @return [Array] 
-function gatherCandidates(servers) {
+function gatherCandidates(serversArr) {
+  servers = serversArr;
   // Build a connection config for each server
   for (let i = 0; i < servers.length; ++i) {
+    console.log("Loop ", i)
     server = servers[i];
 
     const iceServer = {
@@ -89,6 +109,7 @@ function gatherCandidates(servers) {
 
     console.log(`PeerConnection created with config=${JSON.stringify(config)}`);
     pc = new RTCPeerConnection(config);
+    console.log("pc",)
     pc.onicecandidate = iceCallback;
     pc.onicegatheringstatechange = gatheringStateChange;
     pc.onicecandidateerror = iceCandidateError;
@@ -102,6 +123,7 @@ function gatherCandidates(servers) {
 }
 
 function iceCallback(event) {
+  console.log("iceCallback", server)
   if (event.candidate) {
     if (event.candidate.candidate === '') {
       // End of candidate generation
@@ -115,13 +137,13 @@ function iceCallback(event) {
     result.push(serverResponses);
     pc.close();
     pc = null;
-    gatherButton.disabled = false;
   }
 }
 
 // Try to determine authentication failures and unreachable TURN
 // servers by using heuristics on the candidate types gathered.
 function getFinalResult() {
+  console.log("final: ", server);
   let connResult = 'Connection Complete';
 
   // get the candidates types (host, srflx, relay)
@@ -156,16 +178,22 @@ function getFinalResult() {
 }
 
 function gatheringStateChange() {
+  console.log("gethering", server);
   if (pc.iceGatheringState !== 'complete') {
     return;
   }
   let serverResponse = getFinalResult();
   result.push(serverResponse);
-  pc.close();
-  pc = null;
+  servers.shift();
+  if (servers.length == 0) {
+    console.log("closing pc");
+    pc.close();
+    pc = null;
+  }
 }
 
 function iceCandidateError(e) {
+  console.log("ice candidate error", server);
   // The interesting attributes of the error are
   // * the url (which allows looking up the server)
   // * the errorCode and errorText
@@ -197,4 +225,4 @@ navigator.mediaDevices
       });
     });
 
-console.log("Result: ", start(["turn:54.188.208.196:443"]));
+( async () => console.log(await start(["turn:54.188.208.196:443", "stun:54.188.208.196:443"])))();
