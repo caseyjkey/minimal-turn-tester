@@ -227,4 +227,5 @@ navigator.mediaDevices
       });
     });
 
-( async () => console.log(await start(["turn:54.188.208.196:443", "stun:54.188.208.196:443"])))();
+
+( async () => console.log(await start(["turn:54.188.108.196:443", "stun:54.188.218.196:443"])))();
