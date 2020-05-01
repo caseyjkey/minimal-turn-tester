@@ -42,33 +42,25 @@ let creds = async () => {
   }
 }
 
-creds().then((result) => {
-  usernameInput.value = result.username;
-  passcodeInput.value = result.password;
-  jsonCreds = result;
-  // Only load from local storage once we have TURN creds
-  readServersFromLocalStorage();
-  console.log(jsonCreds);
-  gatherButton.disabled = false;
-});
+/* End of Fetching Credentials */
 
-/* End of Fetching TURN jsonCreds */
-
-function setDefaultServer(serversSelect) {
-  const o = document.createElement('option');
-  const iceServer = {
-    urls: "turn:54.188.208.196:443",
-    username: jsonCreds.username,
-    credential: jsonCreds.password,
-  };
-  o.value = JSON.stringify(iceServer);
-  console.log(o.value);
-  o.text = `${iceServer.urls} ` + (` [${iceServer.username}:${iceServer.credential}]`);
-  serversSelect.add(o);
+function start(servers) {
+  let serverResponses = [];
+  creds().then((result) => {
+    jsonCreds = result;
+    // Only gather candidates once we have creds from API
+    console.log("Gathering credentials using these creds: ", jsonCreds);
+    let serverResponses = gatherCandidates(servers);
+    console.log(serverResponses);
+  });
+  console.log(serverResponses);
+  return serverResponses
 }
 
 
+
 // Initiates a PeerConnection with the servers and returns an array of boolean connection results
+// Each server expected to be of this format: "turn:54.188.208.196:443"
 // @param servers [Array]
 // @return [Array] 
 function gatherCandidates(servers) {
@@ -173,42 +165,6 @@ function gatheringStateChange() {
   pc = null;
 }
 
-function gotDescription(desc) {
-  begin = window.performance.now();
-  candidates = [];
-  pc.setLocalDescription(desc);
-}
-
-function noDescription(error) {
-  console.log('Error creating offer: ', error);
-}
-
-// Parse the uint32 PRIORITY field into its constituent parts from RFC 5245,
-// type preference, local preference, and (256 - component ID).
-// ex: 126 | 32252 | 255 (126 is host preference, 255 is component ID 1)
-function formatPriority(priority) {
-  return [
-    priority >> 24,
-    (priority >> 8) & 0xFFFF,
-    priority & 0xFF
-  ].join(' | ');
-}
-
-function appendCell(row, val, span) {
-  const cell = document.createElement('td');
-  cell.textContent = val;
-  if (span) {
-    cell.setAttribute('colspan', span);
-  }
-  row.appendChild(cell);
-}
-
-
-
-
-
-
-
 function iceCandidateError(e) {
   // The interesting attributes of the error are
   // * the url (which allows looking up the server)
@@ -217,6 +173,16 @@ function iceCandidateError(e) {
   document.getElementById('error').innerText += 'The server ' + e.url +
     ' returned an error with code=' + e.errorCode + ':\n' +
     e.errorText + '\n';
+}
+
+function gotDescription(desc) {
+  begin = window.performance.now();
+  candidates = [];
+  pc.setLocalDescription(desc);
+}
+
+function noDescription(error) {
+  console.log('Error creating offer: ', error);
 }
 
 
@@ -230,3 +196,5 @@ navigator.mediaDevices
         }
       });
     });
+
+    start();
